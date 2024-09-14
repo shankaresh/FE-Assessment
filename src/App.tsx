@@ -9,18 +9,18 @@ import {
   Select,
   MenuItem,
   Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Container,
   InputAdornment,
+  Avatar,
+  Box,
+  Stack,
+  Tooltip,
+  IconButton,
+  Grid2 as Grid,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { styled } from '@mui/system';
-import { Search } from '@mui/icons-material';
+import { CheckCircleOutline, Close, DeleteOutline, EditOutlined, HighlightOffOutlined, Search } from '@mui/icons-material';
 
 interface Celebrity {
   id: number;
@@ -36,6 +36,12 @@ interface Celebrity {
 
 const StyledAccordion = styled(Accordion)(({ theme }) => ({
   marginBottom: theme.spacing(2),
+  border: '1px solid #ccc',
+  borderRadius: '12px',
+  boxShadow: 'unset',
+  ':before': {
+    backgroundColor: 'unset',
+  }
 }));
 
 const App: React.FC = () => {
@@ -107,7 +113,9 @@ const App: React.FC = () => {
     }
   };
 
-  const handleInputChange = (name:string , value:string) => {
+  const handleClose = () => setDeleteDialogOpen(false);
+
+  const handleInputChange = (name: string, value: string) => {
     if (editedCelebrity) {
       setEditedCelebrity({ ...editedCelebrity, [name]: value });
     }
@@ -115,15 +123,19 @@ const App: React.FC = () => {
 
   return (
     <div>
-      <Container maxWidth="md" sx={{ my:2 }}>
+      <Container maxWidth="md" sx={{ my: 2 }}>
         <TextField
           fullWidth
+          size='small'
           variant="outlined"
           placeholder="Search celebrities"
           value={searchTerm}
           onChange={handleSearch}
           slotProps={{
             input: {
+              style:{
+                borderRadius: '12px',
+              },
               startAdornment: (
                 <InputAdornment position="start">
                   <Search />
@@ -131,7 +143,9 @@ const App: React.FC = () => {
               ),
             },
           }}
-          style={{ marginBottom: '20px', }}
+          sx={{ 
+            marginBottom: '20px',
+          }}
         />
         {filteredCelebrities.map((celebrity) => (
           <StyledAccordion
@@ -139,82 +153,261 @@ const App: React.FC = () => {
             expanded={expandedId === celebrity?.id}
             onChange={() => handleAccordionChange(celebrity?.id)}
           >
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <img src={celebrity?.picture} alt={`${celebrity?.first} ${celebrity?.last}`} style={{ marginRight: '10px' }} />
-              <Typography>{`${celebrity?.first} ${celebrity?.last}`}</Typography>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ margin:0 }}>
+              <Box display="flex" alignItems="center" width="100%" justifyContent="flex-start">
+                <Avatar
+                  src={celebrity?.picture}
+                  alt={`${celebrity?.first} ${celebrity?.last}`}
+                  sx={{ width: 40, height: 40, marginRight: 2, border: '1px solid #ccc'}}
+                />
+                {editingId === celebrity?.id ? (
+                  <>
+                    <TextField
+                      name="first"
+                      size='small'
+                      value={editedCelebrity?.first ?? ''}
+                      onChange={(e) => handleInputChange('first', e?.target?.value)}
+                      slotProps={{
+                        input: {
+                          style:{
+                            borderRadius: '12px',
+                          },
+                        },
+                      }}
+                    />
+                    <TextField
+                      name="last"
+                      size='small'
+                      value={editedCelebrity?.last ?? ''}
+                      onChange={(e) => handleInputChange('last', e?.target?.value)}
+                      slotProps={{
+                        input: {
+                          style:{
+                            borderRadius: '12px',
+                          },
+                        },
+                      }}
+                    />
+                  </>
+                ):(
+                  <Typography>{`${celebrity?.first} ${celebrity?.last}`}</Typography>
+                )}
+              </Box>
             </AccordionSummary>
             <AccordionDetails>
-              {editingId === celebrity?.id ? (
-                <>
-                  <TextField
-                    fullWidth
-                    name="country"
-                    label="Country"
-                    value={editedCelebrity?.country ?? ''}
-                    onChange={(e) => handleInputChange('country', e?.target?.value)}
-                    style={{ marginBottom: '10px' }}
-                  />
-                  <Select
-                    fullWidth
-                    name="gender"
-                    value={editedCelebrity?.gender ?? ''}
-                    onChange={(e) => handleInputChange('gender', e?.target?.value)}
-                    style={{ marginBottom: '10px' }}
-                  >
-                    <MenuItem value="male">Male</MenuItem>
-                    <MenuItem value="female">Female</MenuItem>
-                    <MenuItem value="transgender">Transgender</MenuItem>
-                    <MenuItem value="rather not say">Rather not say</MenuItem>
-                    <MenuItem value="other">Other</MenuItem>
-                  </Select>
-                  <TextField
-                    fullWidth
-                    name="description"
-                    label="Description"
-                    multiline
-                    rows={4}
-                    value={editedCelebrity?.description ?? ''}
-                    onChange={(e) => handleInputChange('description', e?.target?.value)}
-                    style={{ marginBottom: '10px' }}
-                  />
-                  <Button onClick={handleSave} disabled={JSON.stringify(editedCelebrity) === JSON.stringify(celebrity)}>
-                    Save
-                  </Button>
-                  <Button onClick={handleCancel}>Cancel</Button>
-                </>
-              ) : (
-                <>
-                  <Typography>Age: {calculateAge(celebrity?.dob)}</Typography>
-                  <Typography>Gender: {celebrity?.gender}</Typography>
-                  <Typography>Country: {celebrity?.country}</Typography>
-                  <Typography>Description: {celebrity?.description}</Typography>
-                  <Button
-                    startIcon={<EditIcon />}
-                    onClick={() => handleEdit(celebrity)}
-                    disabled={calculateAge(celebrity?.dob) < 18}
-                  >
-                    Edit
-                  </Button>
-                  <Button startIcon={<DeleteIcon />} onClick={() => handleDelete(celebrity?.id)}>
-                    Delete
-                  </Button>
-                </>
-              )}
+              <Grid container spacing={2}>
+                <Grid size={4}>
+                  <Stack direction={'column'}>
+                    <Typography style={{ color:'#999' }}>Age</Typography>
+                    {editingId === celebrity?.id ? (
+                      <TextField
+                        fullWidth
+                        name="dob"
+                        type='date'
+                        size='small'
+                        value={editedCelebrity?.dob ?? ''}
+                        onChange={(e) => handleInputChange('dob', e?.target?.value)}
+                        slotProps={{
+                          input: {
+                            style:{
+                              borderRadius: '12px',
+                            },
+                          },
+                        }}
+                      />
+                    ):(
+                      <Typography>{calculateAge(celebrity?.dob)}</Typography>
+                    )}
+                  </Stack>
+                </Grid>
+                <Grid size={4}>
+                  <Stack direction={'column'}>
+                    <Typography style={{ color:'#999' }}>Gender</Typography>
+                    {editingId === celebrity?.id ? (
+                      <Select
+                        fullWidth
+                        name="gender"
+                        size='small'
+                        value={editedCelebrity?.gender ?? ''}
+                        onChange={(e) => handleInputChange('gender', e?.target?.value)}
+                        sx={{ borderRadius: '12px' }}
+                      >
+                        <MenuItem value="male">Male</MenuItem>
+                        <MenuItem value="female">Female</MenuItem>
+                        <MenuItem value="transgender">Transgender</MenuItem>
+                        <MenuItem value="rather not say">Rather not say</MenuItem>
+                        <MenuItem value="other">Other</MenuItem>
+                      </Select>
+                    ):(
+                      <Typography>{celebrity?.gender}</Typography>
+                    )}
+                  </Stack>
+                </Grid>
+                <Grid size={4}>
+                  <Stack direction={'column'}>
+                    <Typography style={{ color:'#999' }}>Country</Typography>
+                    {editingId === celebrity?.id ? (
+                      <TextField
+                        fullWidth
+                        name="country"
+                        size='small'
+                        value={editedCelebrity?.country ?? ''}
+                        onChange={(e) => handleInputChange('country', e?.target?.value)}
+                        slotProps={{
+                          input: {
+                            style:{
+                              borderRadius: '12px',
+                            },
+                          },
+                        }}
+                      />
+                    ):(
+                      <Typography>{celebrity?.country}</Typography>
+                    )}
+                  </Stack>
+                </Grid>
+                <Grid size={12}>
+                  <Stack direction={'column'}>
+                    <Typography style={{ color:'#999' }}>Description</Typography>
+                    {editingId === celebrity?.id ? (
+                      <TextField
+                        fullWidth
+                        name="description"
+                        size='small'
+                        multiline
+                        rows={4}
+                        value={editedCelebrity?.description ?? ''}
+                        onChange={(e) => handleInputChange('description', e?.target?.value)}
+                        slotProps={{
+                          input: {
+                            style:{
+                              borderRadius: '12px',
+                            },
+                          },
+                        }}
+                      />
+                    ):(
+                      <Typography>{celebrity?.description}</Typography>
+                    )}
+                  </Stack>
+                </Grid>
+                <Grid size={12}>
+                  <Stack direction={'row'} justifyContent={'flex-end'}>
+                    {editingId === celebrity?.id ? (
+                      <>
+                        <Tooltip title="Cancel" placement="top" arrow>
+                          <span>
+                            <IconButton
+                              onClick={handleCancel}
+                              color='error'
+                            >
+                              <HighlightOffOutlined />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title="Save" placement="top" arrow>
+                          <span>
+                            <IconButton
+                              onClick={handleSave} 
+                              disabled={JSON.stringify(editedCelebrity) === JSON.stringify(celebrity)}
+                              color='success'
+                            >
+                              <CheckCircleOutline />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </>
+                    ):(
+                      <>
+                        <Tooltip title="Delete" placement="top" arrow>
+                          <span>
+                            <IconButton
+                              onClick={() => handleDelete(celebrity?.id)}
+                              disabled={calculateAge(celebrity?.dob) < 18}
+                              color='error'
+                            >
+                              <DeleteOutline />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title="Edit" placement="top" arrow>
+                          <span>
+                            <IconButton
+                              onClick={() => handleEdit(celebrity)}
+                              disabled={calculateAge(celebrity?.dob) < 18}
+                              color='primary'
+                            >
+                              <EditOutlined />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </>
+                    )}
+                  </Stack>
+                </Grid>
+              </Grid>
             </AccordionDetails>
           </StyledAccordion>
         ))}
 
-        <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-          <DialogTitle>Confirm Delete</DialogTitle>
-          <DialogContent>
-            <DialogContentText>Are you sure you want to delete this celebrity?</DialogContentText>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button onClick={confirmDelete} color="error">
-              Delete
-            </Button>
-          </DialogActions>
+        <Dialog 
+          open={deleteDialogOpen} 
+          onClose={handleClose}
+          // fullWidth
+          maxWidth={'sm'}
+          PaperProps={{
+            style: {
+              borderRadius:'14px'
+            }
+          }}
+        >
+          <IconButton
+            aria-label="close"
+            onClick={handleClose}
+            sx={(theme) => ({
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: theme.palette.grey[500],
+            })}
+          >
+            <Close />
+          </IconButton>
+          <Box style={{ padding:'1.5rem' }}>
+            <Grid container spacing={3}>
+              <Grid size={12}>
+                <Typography>Are you sure you want to delete?</Typography>
+              </Grid>
+              <Grid size={12}>
+                <Stack direction={'row'} justifyContent={'flex-end'} spacing={2}>
+                  <Button 
+                    onClick={handleClose}
+                    variant='outlined'
+                    color='inherit'
+                    sx={{ 
+                      textTransform: 'capitalize',
+                      px: '2rem',
+                      borderRadius: '14px'
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={confirmDelete}
+                    variant='contained'
+                    sx={{
+                      backgroundColor: "#ff3500",
+                      textTransform: 'capitalize',
+                      px: '2rem',
+                      borderRadius: '14px' 
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </Stack>
+              </Grid>
+            </Grid>
+          </Box>
         </Dialog>
       </Container>
     </div>
