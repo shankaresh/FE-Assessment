@@ -17,6 +17,9 @@ import {
   Tooltip,
   IconButton,
   Grid2 as Grid,
+  Snackbar,
+  Alert,
+  SnackbarCloseReason,
 } from '@mui/material';
 import { styled } from '@mui/system';
 import { Add, CheckCircleOutline, Close, DeleteOutline, EditOutlined, HighlightOffOutlined, Search, Remove } from '@mui/icons-material';
@@ -46,6 +49,8 @@ const StyledAccordion = styled(Accordion)(({ theme }) => ({
 const App: React.FC = () => {
   const [celebrities, setCelebrities] = useState<Celebrity[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [alertMessage, setAlertMessage] = useState<string>('');
+  const [openAlert, setOpenAlert] = useState<boolean>(false);
   const [expandedId, setExpandedId] = useState<number | false>(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editedCelebrity, setEditedCelebrity] = useState<Celebrity | null>(null);
@@ -62,8 +67,29 @@ const App: React.FC = () => {
       .then((data) => setCelebrities(data));
   }, []);
 
+  const handleOpenAlert = (message: string) => {
+    setOpenAlert(true);
+    setAlertMessage(message);
+  };
+  
+  const handleCloseAlert = (
+    event?: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason,
+  ) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+
+    setOpenAlert(false);
+    setAlertMessage("");
+  };
+
   const handleAccordionChange = (id: number) => {
-    setExpandedId(expandedId === id ? false : id);
+    if (!editingId) {
+      setExpandedId(expandedId === id ? false : id);
+    } else {
+      handleOpenAlert('Finish editing before opening another accordion or closing current accordion');
+    }
   };
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,6 +118,18 @@ const App: React.FC = () => {
 
   const handleSave = () => {
     if (editedCelebrity) {
+      const isEmptyField = Object.values(editedCelebrity).some(
+        (value) => 
+          value === null || 
+          value === undefined || 
+          (typeof value === "string" && value.trim() === "")
+      );
+
+      if (isEmptyField) {
+        handleOpenAlert("All fields must be filled.");
+        return;
+      }
+      
       setCelebrities(celebrities.map((c) => (c.id === editedCelebrity?.id ? editedCelebrity : c)));
       setEditingId(null);
       setEditedCelebrity(null);
@@ -123,12 +161,36 @@ const App: React.FC = () => {
 
   const handleInputChange = (name: string, value: string) => {
     if (editedCelebrity) {
-      setEditedCelebrity({ ...editedCelebrity, [name]: value });
+      if (name === 'country') {
+        if (!/\d/.test(value)) { // Ensure no numbers in country field
+          setEditedCelebrity({ ...editedCelebrity, [name]: value });
+        } else {
+          handleOpenAlert('Please avoid numbers in country field');
+        }
+      } else {
+        setEditedCelebrity({ ...editedCelebrity, [name]: value });
+      }
     }
   };
 
   return (
     <div>
+      <Snackbar
+        anchorOrigin={{ vertical:'top', horizontal:'center' }}
+        autoHideDuration={6000} 
+        open={openAlert}
+        onClose={handleCloseAlert}
+      >
+        <Alert
+          onClose={handleCloseAlert}
+          severity="error"
+          // variant="outlined"
+          sx={{ width: '100%' }}
+        >
+          {alertMessage}
+        </Alert>
+      </Snackbar>
+
       <Container maxWidth="md" sx={{ my: 2 }}>
         <TextField
           fullWidth
@@ -158,6 +220,7 @@ const App: React.FC = () => {
             key={celebrity?.id}
             expanded={expandedId === celebrity?.id}
             onChange={() => handleAccordionChange(celebrity?.id)}
+            disabled={expandedId !== celebrity?.id && (!!editingId)}
           >
             <AccordionSummary expandIcon={expandedId === celebrity?.id ?<Remove />:<Add />} sx={{ margin:0 }}>
               <Box display="flex" alignItems="center" width="100%" justifyContent="flex-start">
@@ -363,6 +426,7 @@ const App: React.FC = () => {
           </StyledAccordion>
         ))}
 
+        {/* delete confirmation */}
         <Dialog 
           open={deleteDialogOpen} 
           onClose={handleClose}
