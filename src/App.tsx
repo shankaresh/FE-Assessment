@@ -18,9 +18,8 @@ import {
   IconButton,
   Grid2 as Grid,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { styled } from '@mui/system';
-import { CheckCircleOutline, Close, DeleteOutline, EditOutlined, HighlightOffOutlined, Search } from '@mui/icons-material';
+import { Add, CheckCircleOutline, Close, DeleteOutline, EditOutlined, HighlightOffOutlined, Search, Remove } from '@mui/icons-material';
 
 interface Celebrity {
   id: number;
@@ -52,6 +51,10 @@ const App: React.FC = () => {
   const [editedCelebrity, setEditedCelebrity] = useState<Celebrity | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [celebrityToDelete, setCelebrityToDelete] = useState<number | null>(null);
+
+  const stopPropagation = (event: React.MouseEvent<HTMLDivElement | HTMLInputElement | HTMLTextAreaElement> | React.FocusEvent<HTMLDivElement | HTMLInputElement | HTMLTextAreaElement>) => {
+    event?.stopPropagation();
+  };
 
   useEffect(() => {
     fetch('/celebrities.json')
@@ -113,7 +116,10 @@ const App: React.FC = () => {
     }
   };
 
-  const handleClose = () => setDeleteDialogOpen(false);
+  const handleClose = () => {
+    setDeleteDialogOpen(false);
+    setCelebrityToDelete(null);
+  };
 
   const handleInputChange = (name: string, value: string) => {
     if (editedCelebrity) {
@@ -153,7 +159,7 @@ const App: React.FC = () => {
             expanded={expandedId === celebrity?.id}
             onChange={() => handleAccordionChange(celebrity?.id)}
           >
-            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ margin:0 }}>
+            <AccordionSummary expandIcon={expandedId === celebrity?.id ?<Remove />:<Add />} sx={{ margin:0 }}>
               <Box display="flex" alignItems="center" width="100%" justifyContent="flex-start">
                 <Avatar
                   src={celebrity?.picture}
@@ -165,12 +171,16 @@ const App: React.FC = () => {
                     <TextField
                       name="first"
                       size='small'
+                      label='first name'
                       value={editedCelebrity?.first ?? ''}
+                      onFocus={stopPropagation}
+                      onClick={stopPropagation}
                       onChange={(e) => handleInputChange('first', e?.target?.value)}
                       slotProps={{
                         input: {
                           style:{
                             borderRadius: '12px',
+                            marginRight: '10px',
                           },
                         },
                       }}
@@ -178,7 +188,10 @@ const App: React.FC = () => {
                     <TextField
                       name="last"
                       size='small'
+                      label='last name'
                       value={editedCelebrity?.last ?? ''}
+                      onFocus={stopPropagation}
+                      onClick={stopPropagation}
                       onChange={(e) => handleInputChange('last', e?.target?.value)}
                       slotProps={{
                         input: {
