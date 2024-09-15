@@ -57,15 +57,20 @@ const App: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [celebrityToDelete, setCelebrityToDelete] = useState<number | null>(null);
 
+  const calculateAge = (dob: string) => {
+    const today = new Date();
+    const birthDate = new Date(dob);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   const stopPropagation = (event: React.MouseEvent<HTMLDivElement | HTMLInputElement | HTMLTextAreaElement> | React.FocusEvent<HTMLDivElement | HTMLInputElement | HTMLTextAreaElement>) => {
     event?.stopPropagation();
   };
-
-  useEffect(() => {
-    fetch('/celebrities.json')
-      .then((response) => response.json())
-      .then((data) => setCelebrities(data));
-  }, []);
 
   const handleOpenAlert = (message: string) => {
     setOpenAlert(true);
@@ -83,6 +88,17 @@ const App: React.FC = () => {
     setOpenAlert(false);
     setAlertMessage("");
   };
+  
+  useEffect(() => {
+    const fetchCelebrity = async () => {
+      await fetch('/celebrities.json')
+        .then((response) => response.json())
+        .then((data) => setCelebrities(data))
+        .catch(() => handleOpenAlert("Sorry, I couldn't able to fetch the celebrities information!"));
+    };
+
+    fetchCelebrity();
+  }, []);
 
   const handleAccordionChange = (id: number) => {
     if (!editingId) {
@@ -99,17 +115,6 @@ const App: React.FC = () => {
   const filteredCelebrities = celebrities.filter((celebrity) =>
     `${celebrity?.first} ${celebrity?.last}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const calculateAge = (dob: string) => {
-    const today = new Date();
-    const birthDate = new Date(dob);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  };
 
   const handleEdit = (celebrity: Celebrity) => {
     setEditingId(celebrity?.id);
@@ -175,6 +180,7 @@ const App: React.FC = () => {
 
   return (
     <div>
+      {/* alert any error messages */}
       <Snackbar
         anchorOrigin={{ vertical:'top', horizontal:'center' }}
         autoHideDuration={6000} 
@@ -192,6 +198,7 @@ const App: React.FC = () => {
       </Snackbar>
 
       <Container maxWidth="md" sx={{ my: 2 }}>
+        {/* Search input field */}
         <TextField
           fullWidth
           size='small'
@@ -215,74 +222,51 @@ const App: React.FC = () => {
             marginBottom: '20px',
           }}
         />
-        {filteredCelebrities.map((celebrity) => (
-          <StyledAccordion
-            key={celebrity?.id}
-            expanded={expandedId === celebrity?.id}
-            onChange={() => handleAccordionChange(celebrity?.id)}
-            disabled={expandedId !== celebrity?.id && (!!editingId)}
-          >
-            <AccordionSummary expandIcon={expandedId === celebrity?.id ?<Remove />:<Add />} sx={{ margin:0 }}>
-              <Box display="flex" alignItems="center" width="100%" justifyContent="flex-start">
-                <Avatar
-                  src={celebrity?.picture}
-                  alt={`${celebrity?.first} ${celebrity?.last}`}
-                  sx={{ width: 40, height: 40, marginRight: 2, border: '1px solid #ccc'}}
-                />
-                {editingId === celebrity?.id ? (
-                  <>
-                    <TextField
-                      name="first"
-                      size='small'
-                      label='first name'
-                      value={editedCelebrity?.first ?? ''}
-                      onFocus={stopPropagation}
-                      onClick={stopPropagation}
-                      onChange={(e) => handleInputChange('first', e?.target?.value)}
-                      slotProps={{
-                        input: {
-                          style:{
-                            borderRadius: '12px',
-                            marginRight: '10px',
-                          },
-                        },
-                      }}
-                    />
-                    <TextField
-                      name="last"
-                      size='small'
-                      label='last name'
-                      value={editedCelebrity?.last ?? ''}
-                      onFocus={stopPropagation}
-                      onClick={stopPropagation}
-                      onChange={(e) => handleInputChange('last', e?.target?.value)}
-                      slotProps={{
-                        input: {
-                          style:{
-                            borderRadius: '12px',
-                          },
-                        },
-                      }}
-                    />
-                  </>
-                ):(
-                  <Typography>{`${celebrity?.first} ${celebrity?.last}`}</Typography>
-                )}
-              </Box>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Grid container spacing={2}>
-                <Grid size={4}>
-                  <Stack direction={'column'}>
-                    <Typography style={{ color:'#999' }}>Age</Typography>
-                    {editingId === celebrity?.id ? (
+
+        {/* celebrities list display */}
+        {filteredCelebrities?.length ?
+          filteredCelebrities.map((celebrity) => (
+            <StyledAccordion
+              key={celebrity?.id}
+              expanded={expandedId === celebrity?.id}
+              onChange={() => handleAccordionChange(celebrity?.id)}
+              disabled={expandedId !== celebrity?.id && (!!editingId)}
+            >
+              {/* accordion header - image, first name, last name */}
+              <AccordionSummary expandIcon={expandedId === celebrity?.id ?<Remove />:<Add />} sx={{ margin:0 }}>
+                <Box display="flex" alignItems="center" width="100%" justifyContent="flex-start">
+                  <Avatar
+                    src={celebrity?.picture}
+                    alt={`${celebrity?.first} ${celebrity?.last}`}
+                    sx={{ width: 40, height: 40, marginRight: 2, border: '1px solid #ccc'}}
+                  />
+                  {editingId === celebrity?.id ? (
+                    <>
                       <TextField
-                        fullWidth
-                        name="dob"
-                        type='date'
+                        name="first"
                         size='small'
-                        value={editedCelebrity?.dob ?? ''}
-                        onChange={(e) => handleInputChange('dob', e?.target?.value)}
+                        label='first name'
+                        value={editedCelebrity?.first ?? ''}
+                        onFocus={stopPropagation}
+                        onClick={stopPropagation}
+                        onChange={(e) => handleInputChange('first', e?.target?.value)}
+                        slotProps={{
+                          input: {
+                            style:{
+                              borderRadius: '12px',
+                              marginRight: '10px',
+                            },
+                          },
+                        }}
+                      />
+                      <TextField
+                        name="last"
+                        size='small'
+                        label='last name'
+                        value={editedCelebrity?.last ?? ''}
+                        onFocus={stopPropagation}
+                        onClick={stopPropagation}
+                        onChange={(e) => handleInputChange('last', e?.target?.value)}
                         slotProps={{
                           input: {
                             style:{
@@ -291,140 +275,173 @@ const App: React.FC = () => {
                           },
                         }}
                       />
-                    ):(
-                      <Typography>{calculateAge(celebrity?.dob)}</Typography>
-                    )}
-                  </Stack>
-                </Grid>
-                <Grid size={4}>
-                  <Stack direction={'column'}>
-                    <Typography style={{ color:'#999' }}>Gender</Typography>
-                    {editingId === celebrity?.id ? (
-                      <Select
-                        fullWidth
-                        name="gender"
-                        size='small'
-                        value={editedCelebrity?.gender ?? ''}
-                        onChange={(e) => handleInputChange('gender', e?.target?.value)}
-                        sx={{ borderRadius: '12px' }}
-                      >
-                        <MenuItem value="male">Male</MenuItem>
-                        <MenuItem value="female">Female</MenuItem>
-                        <MenuItem value="transgender">Transgender</MenuItem>
-                        <MenuItem value="rather not say">Rather not say</MenuItem>
-                        <MenuItem value="other">Other</MenuItem>
-                      </Select>
-                    ):(
-                      <Typography>{celebrity?.gender}</Typography>
-                    )}
-                  </Stack>
-                </Grid>
-                <Grid size={4}>
-                  <Stack direction={'column'}>
-                    <Typography style={{ color:'#999' }}>Country</Typography>
-                    {editingId === celebrity?.id ? (
-                      <TextField
-                        fullWidth
-                        name="country"
-                        size='small'
-                        value={editedCelebrity?.country ?? ''}
-                        onChange={(e) => handleInputChange('country', e?.target?.value)}
-                        slotProps={{
-                          input: {
-                            style:{
-                              borderRadius: '12px',
+                    </>
+                  ):(
+                    <Typography>{`${celebrity?.first} ${celebrity?.last}`}</Typography>
+                  )}
+                </Box>
+              </AccordionSummary>
+
+              {/* accordion content - age, gender, country, description */}
+              <AccordionDetails>
+                <Grid container spacing={2}>
+                  <Grid size={4}>
+                    <Stack direction={'column'}>
+                      <Typography style={{ color:'#999' }}>Age</Typography>
+                      {editingId === celebrity?.id ? (
+                        <TextField
+                          fullWidth
+                          name="dob"
+                          type='date'
+                          size='small'
+                          value={editedCelebrity?.dob ?? ''}
+                          onChange={(e) => handleInputChange('dob', e?.target?.value)}
+                          slotProps={{
+                            input: {
+                              style:{
+                                borderRadius: '12px',
+                              },
                             },
-                          },
-                        }}
-                      />
-                    ):(
-                      <Typography>{celebrity?.country}</Typography>
-                    )}
-                  </Stack>
-                </Grid>
-                <Grid size={12}>
-                  <Stack direction={'column'}>
-                    <Typography style={{ color:'#999' }}>Description</Typography>
-                    {editingId === celebrity?.id ? (
-                      <TextField
-                        fullWidth
-                        name="description"
-                        size='small'
-                        multiline
-                        rows={4}
-                        value={editedCelebrity?.description ?? ''}
-                        onChange={(e) => handleInputChange('description', e?.target?.value)}
-                        slotProps={{
-                          input: {
-                            style:{
-                              borderRadius: '12px',
+                          }}
+                        />
+                      ):(
+                        <Typography>{calculateAge(celebrity?.dob)}</Typography>
+                      )}
+                    </Stack>
+                  </Grid>
+                  <Grid size={4}>
+                    <Stack direction={'column'}>
+                      <Typography style={{ color:'#999' }}>Gender</Typography>
+                      {editingId === celebrity?.id ? (
+                        <Select
+                          fullWidth
+                          name="gender"
+                          size='small'
+                          value={editedCelebrity?.gender ?? ''}
+                          onChange={(e) => handleInputChange('gender', e?.target?.value)}
+                          sx={{ borderRadius: '12px' }}
+                        >
+                          <MenuItem value="male">Male</MenuItem>
+                          <MenuItem value="female">Female</MenuItem>
+                          <MenuItem value="transgender">Transgender</MenuItem>
+                          <MenuItem value="rather not say">Rather not say</MenuItem>
+                          <MenuItem value="other">Other</MenuItem>
+                        </Select>
+                      ):(
+                        <Typography>{celebrity?.gender}</Typography>
+                      )}
+                    </Stack>
+                  </Grid>
+                  <Grid size={4}>
+                    <Stack direction={'column'}>
+                      <Typography style={{ color:'#999' }}>Country</Typography>
+                      {editingId === celebrity?.id ? (
+                        <TextField
+                          fullWidth
+                          name="country"
+                          size='small'
+                          value={editedCelebrity?.country ?? ''}
+                          onChange={(e) => handleInputChange('country', e?.target?.value)}
+                          slotProps={{
+                            input: {
+                              style:{
+                                borderRadius: '12px',
+                              },
                             },
-                          },
-                        }}
-                      />
-                    ):(
-                      <Typography>{celebrity?.description}</Typography>
-                    )}
-                  </Stack>
+                          }}
+                        />
+                      ):(
+                        <Typography>{celebrity?.country}</Typography>
+                      )}
+                    </Stack>
+                  </Grid>
+                  <Grid size={12}>
+                    <Stack direction={'column'}>
+                      <Typography style={{ color:'#999' }}>Description</Typography>
+                      {editingId === celebrity?.id ? (
+                        <TextField
+                          fullWidth
+                          name="description"
+                          size='small'
+                          multiline
+                          rows={4}
+                          value={editedCelebrity?.description ?? ''}
+                          onChange={(e) => handleInputChange('description', e?.target?.value)}
+                          slotProps={{
+                            input: {
+                              style:{
+                                borderRadius: '12px',
+                              },
+                            },
+                          }}
+                        />
+                      ):(
+                        <Typography>{celebrity?.description}</Typography>
+                      )}
+                    </Stack>
+                  </Grid>
+
+                  <Grid size={12}>
+                    <Stack direction={'row'} justifyContent={'flex-end'}>
+                      {editingId === celebrity?.id ? (
+                        <> {/* data handling options to save or cancel */}
+                          <Tooltip title="Cancel" placement="top" arrow>
+                            <span>
+                              <IconButton
+                                onClick={handleCancel}
+                                color='error'
+                              >
+                                <HighlightOffOutlined />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Save" placement="top" arrow>
+                            <span>
+                              <IconButton
+                                onClick={handleSave} 
+                                disabled={JSON.stringify(editedCelebrity) === JSON.stringify(celebrity)}
+                                color='success'
+                              >
+                                <CheckCircleOutline />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </>
+                      ):(
+                        <> {/* data handling options to delete or edit */}
+                          <Tooltip title="Delete" placement="top" arrow>
+                            <span>
+                              <IconButton
+                                onClick={() => handleDelete(celebrity?.id)}
+                                disabled={calculateAge(celebrity?.dob) < 18}
+                                color='error'
+                              >
+                                <DeleteOutline />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Edit" placement="top" arrow>
+                            <span>
+                              <IconButton
+                                onClick={() => handleEdit(celebrity)}
+                                disabled={calculateAge(celebrity?.dob) < 18}
+                                color='primary'
+                              >
+                                <EditOutlined />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </>
+                      )}
+                    </Stack>
+                  </Grid>
                 </Grid>
-                <Grid size={12}>
-                  <Stack direction={'row'} justifyContent={'flex-end'}>
-                    {editingId === celebrity?.id ? (
-                      <>
-                        <Tooltip title="Cancel" placement="top" arrow>
-                          <span>
-                            <IconButton
-                              onClick={handleCancel}
-                              color='error'
-                            >
-                              <HighlightOffOutlined />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title="Save" placement="top" arrow>
-                          <span>
-                            <IconButton
-                              onClick={handleSave} 
-                              disabled={JSON.stringify(editedCelebrity) === JSON.stringify(celebrity)}
-                              color='success'
-                            >
-                              <CheckCircleOutline />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      </>
-                    ):(
-                      <>
-                        <Tooltip title="Delete" placement="top" arrow>
-                          <span>
-                            <IconButton
-                              onClick={() => handleDelete(celebrity?.id)}
-                              disabled={calculateAge(celebrity?.dob) < 18}
-                              color='error'
-                            >
-                              <DeleteOutline />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title="Edit" placement="top" arrow>
-                          <span>
-                            <IconButton
-                              onClick={() => handleEdit(celebrity)}
-                              disabled={calculateAge(celebrity?.dob) < 18}
-                              color='primary'
-                            >
-                              <EditOutlined />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      </>
-                    )}
-                  </Stack>
-                </Grid>
-              </Grid>
-            </AccordionDetails>
-          </StyledAccordion>
-        ))}
+              </AccordionDetails>
+            </StyledAccordion>
+          ))
+        :
+          <Typography style={{ textAlign:'center' }}>No celebrity found !</Typography>
+        }
 
         {/* delete confirmation */}
         <Dialog 
@@ -455,6 +472,7 @@ const App: React.FC = () => {
               <Grid size={12}>
                 <Typography>Are you sure you want to delete?</Typography>
               </Grid>
+
               <Grid size={12}>
                 <Stack direction={'row'} justifyContent={'flex-end'} spacing={2}>
                   <Button 
